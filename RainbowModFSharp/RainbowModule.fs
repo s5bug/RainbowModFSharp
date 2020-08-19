@@ -72,7 +72,7 @@ type RainbowModule() =
                 if settings.RainbowEnabled
                 then
                     let wave = self.GetWave() * 60.0f * settings.RainbowSpeedFactor
-                    let colorRainbow: Color = RainbowModule.ColorFromHSV ((float32 index) / (float32 (self.GetSprite().HairCount))) 0.6f 1.0f
+                    let colorRainbow: Color = RainbowModule.ColorFromHSV ((((float32 index) / (float32 (self.GetSprite().HairCount))) * 180.0f) + wave) 0.6f 1.0f
                     color <- Color(
                                       (float32 color.R / 255.0f) * 0.3f + (float32 colorRainbow.R / 255.0f) * 0.7f,
                                       (float32 color.G / 255.0f) * 0.3f + (float32 colorRainbow.G / 255.0f) * 0.7f,
