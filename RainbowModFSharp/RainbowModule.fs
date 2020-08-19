@@ -19,15 +19,26 @@ type RainbowModule() =
     override this.Load() =
         On.Celeste.PlayerHair.add_GetHairColor(this.GetHairColorHook)
         On.Celeste.Player.add_GetTrailColor(this.GetTrailColorHook)
+        On.Celeste.PlayerHair.add_GetHairTexture(this.GetHairTextureHook)
         
     override this.Unload() =
         On.Celeste.PlayerHair.remove_GetHairColor(this.GetHairColorHook)
         On.Celeste.Player.remove_GetTrailColor(this.GetTrailColorHook)
+        On.Celeste.PlayerHair.remove_GetHairTexture(this.GetHairTextureHook)
 
     override this.SettingsType: Type = typeof<RainbowModuleSettings>
     member this.Settings with get(): RainbowModuleSettings = this._Settings :?> _
     
     member val private trailIndex = 0 with get, set
+    
+    member val private FoxBangs: System.Collections.Generic.List<MTexture> = System.Collections.Generic.List<MTexture>() with get, set
+    member val private FoxHair: System.Collections.Generic.List<MTexture> = System.Collections.Generic.List<MTexture>() with get, set
+    
+    member val private Skateboard: MTexture = Unchecked.defaultof<MTexture> with get, set
+    static member SkateboardPlayerOffset = Vector2(0.0f, -3.0f)
+    
+    member val private Dab: MTexture = Unchecked.defaultof<MTexture> with get, set
+    static member DabPlayerOffset = Vector2(0.0f, -5.0f)
     
     override this.LoadSettings() =
         base.LoadSettings()
@@ -40,6 +51,12 @@ type RainbowModule() =
         if updateDark then settings.FoxColorDark <- Color(0.1f, 0.05f, 0.0f, 1.0f)
             
         if update then this.SaveSettings()
+        
+    override this.LoadContent (firstLoad: bool) =
+        this.FoxBangs <- GFX.Game.GetAtlasSubtextures("characters/player/foxbangs")
+        this.FoxHair <- GFX.Game.GetAtlasSubtextures("characters/player/foxhair")
+        this.Skateboard <- GFX.Game.Item "characters/player/skateboard"
+        this.Dab <- GFX.Game.Item "characters/player/dab"
 
     member this.GetHairColor (orig: On.Celeste.PlayerHair.orig_GetHairColor) (self: PlayerHair) (index: int): Color =
         let colorOrig = orig.Invoke(self, index)
@@ -95,6 +112,15 @@ type RainbowModule() =
             result
         
     member this.GetTrailColorHook = On.Celeste.Player.hook_GetTrailColor(this.GetTrailColor)
+    
+    member this.GetHairTexture (orig: On.Celeste.PlayerHair.orig_GetHairTexture) (self: PlayerHair) (index: int): MTexture =
+        let settings = this.Settings
+        if not (self.Entity :? Player) || self.GetSprite().Mode = PlayerSpriteMode.Badeline || not settings.FoxEnabled
+        then orig.Invoke(self, index)
+        else
+            if index = 0 then this.FoxBangs.Item (self.GetSprite().HairFrame) else this.FoxHair.Item (index % this.FoxHair.Count)
+    
+    member this.GetHairTextureHook = On.Celeste.PlayerHair.hook_GetHairTexture(this.GetHairTexture)
     
     static member ColorFromHSV (hue: float32) (saturation: float32) (value: float32): Color =
         let hi = int (Math.Floor (double (hue / 60.0f))) % 6

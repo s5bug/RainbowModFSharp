@@ -35,4 +35,35 @@
       <Name>Celeste.Mod.mm.csproj</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="everest.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Content\Dialog\English.txt">
+      <LogicalName>Content\Dialog\English.txt</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\foxbangs00.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\foxbangs00.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\foxbangs01.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\foxbangs01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\foxbangs02.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\foxbangs02.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\foxhair00.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\foxhair00.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\foxhair01.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\foxhair01.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\skateboard.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\skateboard.png</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\Graphics\Atlases\Gameplay\characters\player\dab.png">
+      <LogicalName>Content\Graphics\Atlases\Gameplay\characters\player\dab.png</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>
