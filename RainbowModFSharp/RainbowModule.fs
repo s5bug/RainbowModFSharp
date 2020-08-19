@@ -16,41 +16,84 @@ open Mono.Cecil.Cil
 type RainbowModule() =
     inherit EverestModule()
     
-    static let mutable instance: Option<RainbowModule> = None
-    static member Instance with get(): Option<RainbowModule> = instance
-    
     override this.Load() =
-        match RainbowModule.Instance with
-        | Some(x) -> Logger.Log(LogLevel.Warn, "rainbowmodfs", "Load called while instance already loaded!")
-        | None -> instance <- Some this
-        
-        On.Celeste.PlayerHair.add_GetHairColor(On.Celeste.PlayerHair.hook_GetHairColor(RainbowModule.GetHairColor))
+        On.Celeste.PlayerHair.add_GetHairColor(this.GetHairColorHook)
         
     override this.Unload() =
-        match RainbowModule.Instance with
-        | Some(x) -> instance <- None
-        | None -> Logger.Log(LogLevel.Warn, "rainbowmodfs", "Unload called while no instance loaded!")
+        On.Celeste.PlayerHair.remove_GetHairColor(this.GetHairColorHook)
 
     override this.SettingsType: Type = typeof<RainbowModuleSettings>
-    static member Settings with get(): Option<RainbowModuleSettings> = Option.map (fun (i: RainbowModule) -> i._Settings :?> _) RainbowModule.Instance
+    member this.Settings with get(): RainbowModuleSettings = this._Settings :?> _
     
     override this.LoadSettings() =
         base.LoadSettings()
-        match RainbowModule.Settings with
-        | Some(settings) ->
-            let updateLight = settings.FoxColorLight.A = byte 0
-            let updateDark = settings.FoxColorDark.A = byte 0
-            let update = updateLight || updateDark
+        let settings = this.Settings
+        let updateLight = settings.FoxColorLight.A = byte 0
+        let updateDark = settings.FoxColorDark.A = byte 0
+        let update = updateLight || updateDark
             
-            if updateLight then settings.FoxColorLight <- Color(0.8f, 0.5f, 0.05f, 1.0f)
-            if updateDark then settings.FoxColorDark <- Color(0.1f, 0.05f, 0.0f, 1.0f)
+        if updateLight then settings.FoxColorLight <- Color(0.8f, 0.5f, 0.05f, 1.0f)
+        if updateDark then settings.FoxColorDark <- Color(0.1f, 0.05f, 0.0f, 1.0f)
             
-            if update then this.SaveSettings()
-        | None -> Logger.Log(LogLevel.Warn, "rainbowmodfs", "LoadSettings called but no Settings were available!")
+        if update then this.SaveSettings()
 
-    static member GetHairColor (orig: On.Celeste.PlayerHair.orig_GetHairColor) (self: PlayerHair) (index: int): Color =
+    member this.GetHairColor (orig: On.Celeste.PlayerHair.orig_GetHairColor) (self: PlayerHair) (index: int): Color =
         let colorOrig = orig.Invoke(self, index)
         if not (self.Entity :? Player) || self.GetSprite().Mode = PlayerSpriteMode.Badeline
             then colorOrig
             else
-                invalidOp "Unimplemented"
+                let settings = this.Settings
+                let mutable color = colorOrig
+                
+                if settings.FoxEnabled
+                then
+                    if index % 2 = 0
+                    then
+                        let colorFox = settings.FoxColorLight
+                        color <- Color(
+                                          (float32 color.R / 255.0f) * 0.1f + (float32 colorFox.R / 255.0f) * 0.9f,
+                                          (float32 color.G / 255.0f) * 0.05f + (float32 colorFox.G / 255.0f) * 0.95f,
+                                          (float32 color.B / 255.0f) * 0.2f + (float32 colorFox.B / 255.0f) * 0.8f,
+                                          float32 color.A / 255.0f
+                                      )
+                    else
+                        let colorFox = settings.FoxColorDark
+                        color <- Color(
+                                          (float32 color.R / 255.0f) * 0.1f + (float32 colorFox.R / 255.0f) * 0.7f,
+                                          (float32 color.G / 255.0f) * 0.1f + (float32 colorFox.G / 255.0f) * 0.7f,
+                                          (float32 color.B / 255.0f) * 0.1f + (float32 colorFox.B / 255.0f) * 0.7f,
+                                          float32 color.A / 255.0f
+                                      )
+                
+                if settings.RainbowEnabled
+                then
+                    let wave = self.GetWave() * 60.0f * settings.RainbowSpeedFactor
+                    let colorRainbow: Color = RainbowModule.ColorFromHSV ((float32 index) / (float32 (self.GetSprite().HairCount))) 0.6f 1.0f
+                    color <- Color(
+                                      (float32 color.R / 255.0f) * 0.3f + (float32 colorRainbow.R / 255.0f) * 0.7f,
+                                      (float32 color.G / 255.0f) * 0.3f + (float32 colorRainbow.G / 255.0f) * 0.7f,
+                                      (float32 color.B / 255.0f) * 0.3f + (float32 colorRainbow.B / 255.0f) * 0.7f,
+                                      float32 color.A / 255.0f
+                                  )
+                
+                color
+                
+    member this.GetHairColorHook = On.Celeste.PlayerHair.hook_GetHairColor(this.GetHairColor)
+
+    static member ColorFromHSV (hue: float32) (saturation: float32) (value: float32): Color =
+        let hi = int (Math.Floor (double (hue / 60.0f))) % 6
+        let f = (hue / 60.0f) - float32 (Math.Floor (double (hue / 60.0f)))
+        
+        let nv = value * 255.0f
+        let v = int (Math.Round (double nv))
+        let p = int (Math.Round (double (nv * (1.0f - saturation))))
+        let q = int (Math.Round (double (nv * (1.0f - (f * saturation)))))
+        let t = int (Math.Round (double (nv * (1.0f - ((1.0f - f) * saturation)))))
+        
+        match hi with
+        | 0 -> Color(v, t, p, 255)
+        | 1 -> Color(q, v, p, 255)
+        | 2 -> Color(p, v, t, 255)
+        | 3 -> Color(p, q, v, 255)
+        | 4 -> Color(t, p, v, 255)
+        | _ -> Color(v, p, q, 255)
