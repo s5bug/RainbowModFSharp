@@ -18,12 +18,16 @@ type RainbowModule() =
     
     override this.Load() =
         On.Celeste.PlayerHair.add_GetHairColor(this.GetHairColorHook)
+        On.Celeste.Player.add_GetTrailColor(this.GetTrailColorHook)
         
     override this.Unload() =
         On.Celeste.PlayerHair.remove_GetHairColor(this.GetHairColorHook)
+        On.Celeste.Player.remove_GetTrailColor(this.GetTrailColorHook)
 
     override this.SettingsType: Type = typeof<RainbowModuleSettings>
     member this.Settings with get(): RainbowModuleSettings = this._Settings :?> _
+    
+    member val private trailIndex = 0 with get, set
     
     override this.LoadSettings() =
         base.LoadSettings()
@@ -80,6 +84,18 @@ type RainbowModule() =
                 
     member this.GetHairColorHook = On.Celeste.PlayerHair.hook_GetHairColor(this.GetHairColor)
 
+    member this.GetTrailColor (orig: On.Celeste.Player.orig_GetTrailColor) (self: Player) (wasDashB: bool): Color =
+        let settings = this.Settings
+        if not settings.RainbowEnabled || self.Sprite.Mode = PlayerSpriteMode.Badeline || self.Hair = null
+        then
+            orig.Invoke(self, wasDashB)
+        else
+            let result = self.Hair.GetHairColor(this.trailIndex % self.Hair.GetSprite().HairCount)
+            this.trailIndex <- this.trailIndex + 1
+            result
+        
+    member this.GetTrailColorHook = On.Celeste.Player.hook_GetTrailColor(this.GetTrailColor)
+    
     static member ColorFromHSV (hue: float32) (saturation: float32) (value: float32): Color =
         let hi = int (Math.Floor (double (hue / 60.0f))) % 6
         let f = (hue / 60.0f) - float32 (Math.Floor (double (hue / 60.0f)))
