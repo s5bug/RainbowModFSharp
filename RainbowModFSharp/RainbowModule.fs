@@ -21,12 +21,16 @@ type RainbowModule() =
         On.Celeste.Player.add_GetTrailColor (this.GetTrailColorHook)
         On.Celeste.PlayerHair.add_GetHairTexture (this.GetHairTextureHook)
         On.Celeste.PlayerHair.add_Render (this.RenderHairHook)
+        On.Celeste.Player.add_Render (this.RenderPlayerHook)
+        On.Celeste.PlayerSprite.add_Render (this.RenderPlayerSpriteHook)
 
     override this.Unload() =
         On.Celeste.PlayerHair.remove_GetHairColor (this.GetHairColorHook)
         On.Celeste.Player.remove_GetTrailColor (this.GetTrailColorHook)
         On.Celeste.PlayerHair.remove_GetHairTexture (this.GetHairTextureHook)
         On.Celeste.PlayerHair.remove_Render (this.RenderHairHook)
+        On.Celeste.Player.remove_Render (this.RenderPlayerHook)
+        On.Celeste.PlayerSprite.remove_Render (this.RenderPlayerSpriteHook)
 
     override this.SettingsType: Type = typeof<RainbowModuleSettings>
     member this.Settings: RainbowModuleSettings = this._Settings :?> _
@@ -301,6 +305,50 @@ type RainbowModule() =
 
             sprite.Color <- color
             sprite.Position <- origin
+            
+    member this.RenderPlayer (orig: On.Celeste.Player.orig_Render) (self: Player): unit =
+        let renderPos = self.Sprite.RenderPosition
+        let settings = this.Settings
+        if settings.SkateboardEnabled then
+            self.Sprite.RenderPosition <- self.Sprite.RenderPosition + RainbowModule.SkateboardPlayerOffset
+        if settings.DuckToDabEnabled && self.Ducking then
+            self.Sprite.RenderPosition <- self.Sprite.RenderPosition + RainbowModule.DabPlayerOffset
+        
+        orig.Invoke(self)
+        
+        if settings.SkateboardEnabled then
+            this.Skateboard.Draw(
+                                    renderPos.Floor() + Vector2((if self.Facing = Facings.Left then 9.0f else -8.0f), -4.0f),
+                                    Vector2.Zero,
+                                    Color.White,
+                                    Vector2((if self.Facing = Facings.Left then -1.0f else 1.0f), 1.0f)
+                                )
+        
+        if settings.SkateboardEnabled then
+            self.Sprite.RenderPosition <- self.Sprite.RenderPosition - RainbowModule.SkateboardPlayerOffset
+        if settings.DuckToDabEnabled && self.Ducking then
+            self.Sprite.RenderPosition <- self.Sprite.RenderPosition - RainbowModule.DabPlayerOffset
+            
+    member this.RenderPlayerHook =
+        On.Celeste.Player.hook_Render (this.RenderPlayer)
+    
+    member this.RenderPlayerSprite (orig: On.Celeste.PlayerSprite.orig_Render) (self: PlayerSprite): unit =
+        let settings = this.Settings
+        match self.Entity with
+        | :? Player as player ->
+             if self.Mode <> PlayerSpriteMode.Badeline && settings.DuckToDabEnabled && player.Ducking then
+                this.Dab.Draw(
+                                 self.RenderPosition.Floor() + Vector2((if player.Facing = Facings.Left then 6.0f else -6.0f), -7.0f),
+                                 Vector2.Zero,
+                                 Color.White,
+                                 self.Scale
+                             )
+             else
+                 orig.Invoke(self)
+        | _ -> orig.Invoke(self)
+    
+    member this.RenderPlayerSpriteHook =
+        On.Celeste.PlayerSprite.hook_Render (this.RenderPlayerSprite)
 
     static member ColorFromHSV (hue: float32) (saturation: float32) (value: float32): Color =
         let hi =
