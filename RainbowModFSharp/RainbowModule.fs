@@ -174,53 +174,67 @@ type RainbowModule() =
         let settings = this.Settings
         if not settings.BaldelineEnabled then
             match self.Entity with
-            | :? Player as player ->
-                if self.GetSprite().Mode = PlayerSpriteMode.Badeline then
-                    orig.Invoke(self)
-                else
-                    if settings.SkateboardEnabled then
-                        for i = 0 to self.Nodes.Count - 1 do
-                            self.Nodes.[i] <- self.Nodes.[i]
-                                              + RainbowModule.SkateboardPlayerOffset
-                    if settings.DuckToDabEnabled && player.Ducking then
-                        for i = 0 to self.Nodes.Count - 1 do
-                            self.Nodes.[i] <- self.Nodes.[i] + RainbowModule.DabPlayerOffset
+            | :? Player as player when self.GetSprite().Mode <> PlayerSpriteMode.Badeline ->
+                if settings.SkateboardEnabled then
+                    for i = 0 to self.Nodes.Count - 1 do
+                        self.Nodes.[i] <- self.Nodes.[i]
+                                          + RainbowModule.SkateboardPlayerOffset
+                if settings.DuckToDabEnabled && player.Ducking then
+                    for i = 0 to self.Nodes.Count - 1 do
+                        self.Nodes.[i] <- self.Nodes.[i] + RainbowModule.DabPlayerOffset
 
-                    if settings.WoomyEnabled then
-                        let sprite = self.GetSprite()
-                        // TODO figure out the HasHair thing
+                if settings.WoomyEnabled then
+                    let sprite = self.GetSprite()
+                    // TODO figure out the HasHair thing
 
-                        let woomyOffs = 3.0f
-                        let woomyScaleMul = Vector2(0.7f, 0.7f)
-                        let woomyScaleOffs = Vector2(-0.2f, -0.2f)
+                    let woomyOffs = 3.0f
+                    let woomyScaleMul = Vector2(0.7f, 0.7f)
+                    let woomyScaleOffs = Vector2(-0.2f, -0.2f)
 
-                        let origin = Vector2(5.0f, 5.0f)
-                        let colorBorder = self.Border * self.Alpha
+                    let origin = Vector2(5.0f, 5.0f)
+                    let colorBorder = self.Border * self.Alpha
 
-                        this.RenderHairPlayerOutline self
+                    this.RenderHairPlayerOutline self
 
-                        let mutable pos: Vector2 = Unchecked.defaultof<Vector2>
-                        let mutable tex: MTexture = Unchecked.defaultof<MTexture>
-                        let mutable color: Color = Unchecked.defaultof<Color>
-                        let mutable scale: Vector2 = Unchecked.defaultof<Vector2>
+                    let mutable pos: Vector2 = Unchecked.defaultof<Vector2>
+                    let mutable tex: MTexture = Unchecked.defaultof<MTexture>
+                    let mutable color: Color = Unchecked.defaultof<Color>
+                    let mutable scale: Vector2 = Unchecked.defaultof<Vector2>
 
-                        self.Nodes.[0] <- self.Nodes.[0].Floor()
+                    self.Nodes.[0] <- self.Nodes.[0].Floor()
 
-                        if colorBorder.A > byte 0 then
-                            tex <- self.GetHairTexture(0)
-                            scale <- self.GetHairScale(0)
-                            pos <- self.Nodes.[0]
-                            tex.Draw(pos + Vector2(-1.0f, 0.0f), origin, colorBorder, scale)
-                            tex.Draw(pos + Vector2(1.0f, 0.0f), origin, colorBorder, scale)
-                            tex.Draw(pos + Vector2(0.0f, -1.0f), origin, colorBorder, scale)
-                            tex.Draw(pos + Vector2(0.0f, 1.0f), origin, colorBorder, scale)
+                    if colorBorder.A > byte 0 then
+                        tex <- self.GetHairTexture(0)
+                        scale <- self.GetHairScale(0)
+                        pos <- self.Nodes.[0]
+                        tex.Draw(pos + Vector2(-1.0f, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(1.0f, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f, -1.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f, 1.0f), origin, colorBorder, scale)
 
-                            tex <- self.GetHairTexture(2)
+                        tex <- self.GetHairTexture(2)
+                        scale <-
+                            self.GetHairScale(sprite.HairCount - 2)
+                            * woomyScaleMul
+                            + woomyScaleOffs
+                        pos <- self.Nodes.[0]
+                        tex.Draw(pos + Vector2(-1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f - woomyOffs, -1.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f - woomyOffs, 1.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(-1.0f + woomyOffs, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(1.0f + woomyOffs, 0.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f + woomyOffs, -1.0f), origin, colorBorder, scale)
+                        tex.Draw(pos + Vector2(0.0f + woomyOffs, 1.0f), origin, colorBorder, scale)
+
+                        for i = 1 to sprite.HairCount - 1 do
+                            tex <- self.GetHairTexture(i)
                             scale <-
-                                self.GetHairScale(sprite.HairCount - 2)
+                                self.GetHairScale(sprite.HairCount - (i + 1))
                                 * woomyScaleMul
+                                + woomyScaleOffs * woomyScaleMul
                                 + woomyScaleOffs
-                            pos <- self.Nodes.[0]
+                            pos <- self.Nodes.[i]
                             tex.Draw(pos + Vector2(-1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
                             tex.Draw(pos + Vector2(1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
                             tex.Draw(pos + Vector2(0.0f - woomyOffs, -1.0f), origin, colorBorder, scale)
@@ -230,57 +244,40 @@ type RainbowModule() =
                             tex.Draw(pos + Vector2(0.0f + woomyOffs, -1.0f), origin, colorBorder, scale)
                             tex.Draw(pos + Vector2(0.0f + woomyOffs, 1.0f), origin, colorBorder, scale)
 
-                            for i = 1 to sprite.HairCount - 1 do
-                                tex <- self.GetHairTexture(i)
-                                scale <-
-                                    self.GetHairScale(sprite.HairCount - (i + 1))
-                                    * woomyScaleMul
-                                    + woomyScaleOffs * woomyScaleMul
-                                    + woomyScaleOffs
-                                pos <- self.Nodes.[i]
-                                tex.Draw(pos + Vector2(-1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(1.0f - woomyOffs, 0.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(0.0f - woomyOffs, -1.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(0.0f - woomyOffs, 1.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(-1.0f + woomyOffs, 0.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(1.0f + woomyOffs, 0.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(0.0f + woomyOffs, -1.0f), origin, colorBorder, scale)
-                                tex.Draw(pos + Vector2(0.0f + woomyOffs, 1.0f), origin, colorBorder, scale)
+                    tex <- self.GetHairTexture(0)
+                    color <- self.GetHairColor(0)
+                    scale <- self.GetHairScale(0)
+                    tex.Draw(self.Nodes.[0], origin, color, scale)
 
-                        tex <- self.GetHairTexture(0)
-                        color <- self.GetHairColor(0)
-                        scale <- self.GetHairScale(0)
-                        tex.Draw(self.Nodes.[0], origin, color, scale)
+                    tex <- self.GetHairTexture(0)
+                    color <- self.GetHairColor(0)
+                    scale <-
+                        self.GetHairScale(sprite.HairCount - 2)
+                        * woomyScaleMul
+                        + woomyScaleOffs
+                    tex.Draw(self.Nodes.[0] + Vector2(-woomyOffs, 0.0f), origin, color, scale)
+                    tex.Draw(self.Nodes.[0] + Vector2(woomyOffs, 0.0f), origin, color, scale)
 
-                        tex <- self.GetHairTexture(0)
-                        color <- self.GetHairColor(0)
+                    for i = sprite.HairCount - 1 downto 1 do
+                        tex <- self.GetHairTexture(i)
+                        color <- self.GetHairColor(i)
                         scale <-
-                            self.GetHairScale(sprite.HairCount - 2)
+                            self.GetHairScale(sprite.HairCount - (i + 1))
                             * woomyScaleMul
                             + woomyScaleOffs
-                        tex.Draw(self.Nodes.[0] + Vector2(-woomyOffs, 0.0f), origin, color, scale)
-                        tex.Draw(self.Nodes.[0] + Vector2(woomyOffs, 0.0f), origin, color, scale)
+                        tex.Draw(self.Nodes.[i] + Vector2(-woomyOffs, 0.0f), origin, color, scale)
+                        tex.Draw(self.Nodes.[i] + Vector2(woomyOffs, 0.0f), origin, color, scale)
 
-                        for i = sprite.HairCount - 1 downto 1 do
-                            tex <- self.GetHairTexture(i)
-                            color <- self.GetHairColor(i)
-                            scale <-
-                                self.GetHairScale(sprite.HairCount - (i + 1))
-                                * woomyScaleMul
-                                + woomyScaleOffs
-                            tex.Draw(self.Nodes.[i] + Vector2(-woomyOffs, 0.0f), origin, color, scale)
-                            tex.Draw(self.Nodes.[i] + Vector2(woomyOffs, 0.0f), origin, color, scale)
+                else
+                    orig.Invoke(self)
 
-                    else
-                        orig.Invoke(self)
-
-                    if settings.SkateboardEnabled then
-                        for i = 0 to self.Nodes.Count - 1 do
-                            self.Nodes.[i] <- self.Nodes.[i]
-                                              - RainbowModule.SkateboardPlayerOffset
-                    if settings.DuckToDabEnabled && player.Ducking then
-                        for i = 0 to self.Nodes.Count - 1 do
-                            self.Nodes.[i] <- self.Nodes.[i] - RainbowModule.DabPlayerOffset
+                if settings.SkateboardEnabled then
+                    for i = 0 to self.Nodes.Count - 1 do
+                        self.Nodes.[i] <- self.Nodes.[i]
+                                          - RainbowModule.SkateboardPlayerOffset
+                if settings.DuckToDabEnabled && player.Ducking then
+                    for i = 0 to self.Nodes.Count - 1 do
+                        self.Nodes.[i] <- self.Nodes.[i] - RainbowModule.DabPlayerOffset
             | _ -> orig.Invoke(self)
 
     member this.RenderHairHook =
@@ -305,48 +302,57 @@ type RainbowModule() =
 
             sprite.Color <- color
             sprite.Position <- origin
-            
+
     member this.RenderPlayer (orig: On.Celeste.Player.orig_Render) (self: Player): unit =
         let renderPos = self.Sprite.RenderPosition
         let settings = this.Settings
         if settings.SkateboardEnabled then
-            self.Sprite.RenderPosition <- self.Sprite.RenderPosition + RainbowModule.SkateboardPlayerOffset
+            self.Sprite.RenderPosition <-
+                self.Sprite.RenderPosition
+                + RainbowModule.SkateboardPlayerOffset
         if settings.DuckToDabEnabled && self.Ducking then
-            self.Sprite.RenderPosition <- self.Sprite.RenderPosition + RainbowModule.DabPlayerOffset
-        
+            self.Sprite.RenderPosition <-
+                self.Sprite.RenderPosition
+                + RainbowModule.DabPlayerOffset
+
         orig.Invoke(self)
-        
+
         if settings.SkateboardEnabled then
-            this.Skateboard.Draw(
-                                    renderPos.Floor() + Vector2((if self.Facing = Facings.Left then 9.0f else -8.0f), -4.0f),
-                                    Vector2.Zero,
-                                    Color.White,
-                                    Vector2((if self.Facing = Facings.Left then -1.0f else 1.0f), 1.0f)
-                                )
-        
+            this.Skateboard.Draw
+                (renderPos.Floor()
+                 + Vector2((if self.Facing = Facings.Left then 9.0f else -8.0f), -4.0f),
+                 Vector2.Zero,
+                 Color.White,
+                 Vector2((if self.Facing = Facings.Left then -1.0f else 1.0f), 1.0f))
+
         if settings.SkateboardEnabled then
-            self.Sprite.RenderPosition <- self.Sprite.RenderPosition - RainbowModule.SkateboardPlayerOffset
+            self.Sprite.RenderPosition <-
+                self.Sprite.RenderPosition
+                - RainbowModule.SkateboardPlayerOffset
         if settings.DuckToDabEnabled && self.Ducking then
-            self.Sprite.RenderPosition <- self.Sprite.RenderPosition - RainbowModule.DabPlayerOffset
-            
+            self.Sprite.RenderPosition <-
+                self.Sprite.RenderPosition
+                - RainbowModule.DabPlayerOffset
+
     member this.RenderPlayerHook =
         On.Celeste.Player.hook_Render (this.RenderPlayer)
-    
+
     member this.RenderPlayerSprite (orig: On.Celeste.PlayerSprite.orig_Render) (self: PlayerSprite): unit =
         let settings = this.Settings
         match self.Entity with
-        | :? Player as player ->
-             if self.Mode <> PlayerSpriteMode.Badeline && settings.DuckToDabEnabled && player.Ducking then
-                this.Dab.Draw(
-                                 self.RenderPosition.Floor() + Vector2((if player.Facing = Facings.Left then 6.0f else -6.0f), -7.0f),
-                                 Vector2.Zero,
-                                 Color.White,
-                                 self.Scale
-                             )
-             else
-                 orig.Invoke(self)
+        | :? Player as player when self.Mode
+                                   <> PlayerSpriteMode.Badeline
+                                   && settings.DuckToDabEnabled
+                                   && player.Ducking ->
+            this.Dab.Draw
+                (self.RenderPosition.Floor()
+                 + Vector2((if player.Facing = Facings.Left then 6.0f else -6.0f), -7.0f),
+                 Vector2.Zero,
+                 Color.White,
+                 self.Scale)
+            orig.Invoke(self)
         | _ -> orig.Invoke(self)
-    
+
     member this.RenderPlayerSpriteHook =
         On.Celeste.PlayerSprite.hook_Render (this.RenderPlayerSprite)
 
